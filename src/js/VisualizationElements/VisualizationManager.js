@@ -2,10 +2,6 @@
 
 import { clamp, contains, map_range, hslToRgb, addEvent, removeEvent, ajax } from "../utils";
 
-// Webgl
-
-import { P3D } from 'C:/Users/Pietro Alberti/Documents/Code/P3D/P3D';
-
 // Visualization
 
 import { Particle } from "./Particle";
@@ -149,6 +145,8 @@ export class VisualizationManager {
 		this._gl.clear( this._gl.COLOR_BUFFER_BIT | this._gl.DEPTH_BUFFER_BIT );
 		this._gl.blendFunc( this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA );
 		this._gl.enable( this._gl.BLEND );
+
+		console.log(this._gl);
 
 		//
 		// Main variables.
