@@ -8,6 +8,8 @@ http://gulpjs.com/
 
 A version of the app is already built in dist/js.
 
+The source files are stored in src/js and the data files are stored in dist/resources/data. All the data used in the visualization is stored in .json files parsed from .csv files. I removed several sections of the original files to reduce their weight.
+
 #### Dependencies: ####
 
 npm dependencies are included in the nodes_modules file.
