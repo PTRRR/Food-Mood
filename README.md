@@ -5,7 +5,7 @@ Food & Mood
 
 use gulp to build the app.
 http://gulpjs.com/
-The gulp file is intended to build the project and the custom webgl render engine into the same file (dist/js/app.js).
+The gulpfile.js is intended to build the project and the custom webgl render engine into the same file (dist/js/app.js).
 
 A version of the app is already built in dist/js.
 
