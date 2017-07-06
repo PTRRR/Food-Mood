@@ -27,6 +27,8 @@
   },
   "dependencies": {
     "gl-fbo": "^2.0.5",
+    "three": "^0.86.0",
+    "three-buffer-vertex-data": "^1.1.0",
     "worker-timers": "^4.0.5"
   }
 }

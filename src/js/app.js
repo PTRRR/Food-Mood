@@ -5,9 +5,25 @@ import { hslToRgb, addEvent, removeEvent, ajax } from "./utils";
 // Data visualization
 
 import { VisualizationManager } from "./VisualizationElements/VisualizationManager";
+let THREE = require ( 'three' );
 let workerTimer = require( 'worker-timers' );
 
 ( function(){
+
+	window.getDevicePixelRatio = function () {
+	    
+	    var ratio = 1;
+	    // To account for zoom, change to use deviceXDPI instead of systemXDPI
+	    if (window.screen.systemXDPI !== undefined && window.screen.logicalXDPI       !== undefined && window.screen.systemXDPI > window.screen.logicalXDPI) {
+	        // Only allow for values > 1
+	        ratio = window.screen.systemXDPI / window.screen.logicalXDPI;
+	    }
+	    else if (window.devicePixelRatio !== undefined) {
+	        ratio = window.devicePixelRatio;
+	    }
+	    return ratio;
+	    
+	};
 
 	function convertTimeSinceEpochToDays ( _timeSinceEpoch ) {
 
@@ -21,10 +37,6 @@ let workerTimer = require( 'worker-timers' );
 	let loadIndex = 0;
 	let totalResources = 30;
 	let loadingBar = document.querySelector('.loading-bar .bar');
-
-	WorkerTimer.setInterval(() => {
-	  console.log("lsdhlkjhl");
-	}, 1000);
 
 	console.log('-------LOADING DATA-------');
 	console.log('--------------------------');

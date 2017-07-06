@@ -6,6 +6,9 @@ import { clamp, contains, map_range, hslToRgb, addEvent, removeEvent, ajax } fro
 
 import { Particle } from "./Particle";
 
+let THREE = require ( 'three' );
+let buffer = require( 'three-buffer-vertex-data' );
+
 export class VisualizationManager {
 
 	constructor ( _canvas, _data ) {
@@ -135,46 +138,24 @@ export class VisualizationManager {
 		this._enableRendering = true;
 		this._enableUpdating = true;
 		this._mainResolution = 1; // 1 = max, 0.5 = mid, etc...
-		this._renderer = new P3D.WebGlRenderer ( { canvas: _canvas, resolution: 0.5, width: window.innerWidth, height: window.innerHeight } );
-	
-		// Get the webgl context out of the canvas.
 
-		this._gl = this._renderer.createContext();
-		this._gl.viewport( 0, 0, this._gl.drawingBufferWidth, this._gl.drawingBufferHeight );
-		this._gl.clearColor( 0.9, 0.9, 0.9, 1.0 );
-		this._gl.clear( this._gl.COLOR_BUFFER_BIT | this._gl.DEPTH_BUFFER_BIT );
-		this._gl.blendFunc( this._gl.SRC_ALPHA, this._gl.ONE_MINUS_SRC_ALPHA );
-		this._gl.enable( this._gl.BLEND );
+		this._renderer = new THREE.WebGLRenderer( {
 
-		console.log(this._gl);
+			canvas: _canvas,
+			depth: false,
+			stencil: false,
 
-		//
-		// Main variables.
-		//
+		} );
 
-		this._mouse = vec3.create();
-		this._particles = [];
-		this._currentParticles = [];
+		this._renderer.setPixelRatio ( window.getDevicePixelRatio() );
+		this._renderer.setSize ( window.innerWidth, window.innerHeight );
 
-		//
-		// Scene initialization
-		//
-
-		this._mainScene = new P3D.Scene ( { context: this._gl, name: 'Main scene' } );
-
-		//
-		// Rendering cameras
-		//
-
-		this._mainCamera = new P3D.OrthoCamera( { context: this._gl, width: this._renderer.realWidth, height: this._renderer.realHeight, nearClipPlane: -400, farClipPlane: 400 } );
-		this._mainCamera.position[ 2 ] = -1;
-		this._mainCamera.lookAt ( vec3.fromValues ( 0, 0, 0 ) );
-
-		//
-		// Custom object that facilitate material creation.
-		//
-
-		this._ml = new P3D.MaterialHelper ( { context: this._gl } );
+		this._mainScene = new THREE.Scene();
+		this._mainScene.background = new THREE.Color( 230 / 255, 230 / 255, 230 / 255 );
+		// this._mainCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+		this._mainCamera = new THREE.OrthographicCamera( window.innerWidth / - 2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, 1, 1000 );
+		this._mainCamera.position.z = -4;
+		this._mainCamera.lookAt ( new THREE.Vector3 () );
 
 		//
 		// Visualizations values.
@@ -190,6 +171,7 @@ export class VisualizationManager {
 		this._timeLine = document.querySelector( '#timeline' );
 		this._cursor = document.querySelector( '#cursor' );
 		this._cursorLocked = false;
+		this._mouse = vec3.create();
 
 		this._notFound = {};
 
@@ -197,8 +179,6 @@ export class VisualizationManager {
 
 		this._hoverTime = null;
 		this._hoverParticle = null;
-
-		console.log(_data);
 
 		for ( let i = 0; i < _data.length; i ++ ) {
 
@@ -208,11 +188,9 @@ export class VisualizationManager {
 
 			if ( contains.call ( content.foodWords, 'honey' ) || contains.call ( content.foodWords2, 'honey' ) ) {
 
-				console.log(content.text);
+				// console.log(content.text);
 
 			}
-
-
 
 		}
 
@@ -273,7 +251,10 @@ export class VisualizationManager {
 
 	onMouseMove ( _position ) {
 
-		this._mouse = vec3.fromValues ( ( _position[ 0 ] / window.innerWidth ) * this._renderer.realWidth, ( _position[ 1 ] / window.innerHeight ) * this._renderer.realHeight, 0 );
+		this._mouse = vec3.fromValues ( ( _position[ 0 ] / window.innerWidth ) * this._renderer.getSize().width * this._renderer.getPixelRatio(), ( _position[ 1 ] / window.innerHeight ) * this._renderer.getSize().height * this._renderer.getPixelRatio(), 0 );
+
+		this._mouse[ 0 ] = ( _position[ 0 ] - this._renderer.getSize().width * 0.5 ) * -1;
+		this._mouse[ 1 ] = ( _position[ 1 ] - this._renderer.getSize().height * 0.5 ) * -1;
 
 		if ( this._cursorLocked ) {
 
@@ -282,8 +263,6 @@ export class VisualizationManager {
 			this._time = clamp ( this._minDate + percent * ( this._maxDate - this._minDate ), this._minDate, this._maxDate );
 
 		}
-
-		// console.log(this._currentParticles[ 0 ]);
 
 		for ( let i = 0; i < this._currentParticles.length; i ++ ) {
 
@@ -306,17 +285,17 @@ export class VisualizationManager {
 
 		// Update the renderer's size.
 
-		this._renderer.width = window.innerWidth;
-		this._renderer.height = window.innerHeight;
+		// this._renderer.width = window.innerWidth;
+		// this._renderer.height = window.innerHeight;
 
 		// Update the cameras.
 
-		this._mainCamera.position = vec3.fromValues ( 0.0, 0.0, -4 );
-		mat4.ortho ( this._mainCamera.pMatrix, 0, - this._renderer.realWidth, this._renderer.realHeight, 0, -400, 400 );
+		//this._mainCamera.position = vec3.fromValues ( 0.0, 0.0, -4 );
+		//mat4.ortho ( this._mainCamera.pMatrix, 0, - this._renderer.realWidth, this._renderer.realHeight, 0, -400, 400 );
 
 		// Update the viewport
 
-		this._gl.viewport ( 0, 0, this._renderer.realWidth, this._renderer.realHeight );
+		//this._gl.viewport ( 0, 0, this._renderer.realWidth, this._renderer.realHeight );
 
 		this.background.position = vec3.fromValues ( this._renderer.realWidth * 0.5, this._renderer.realHeight * 0.48, 0.0 );
 		let minRadius = this._renderer.realHeight < this._renderer.realWidth ? this._renderer.realHeight : this._renderer.realWidth;
@@ -326,22 +305,27 @@ export class VisualizationManager {
 
 	setup () {
 
-		this.background = P3D.CreateMeshFromObj ( this._gl, P3D.Quad ( [ 0, 0, 0 ], [ 1, 1, 1 ] ) );
-		this.background.position = vec3.fromValues ( this._renderer.realWidth * 0.5, this._renderer.realHeight * 0.48, 0.0 );
-		let minRadius = this._renderer.realHeight < this._renderer.realWidth ? this._renderer.realHeight : this._renderer.realWidth;
-		this.background.scale = vec3.fromValues ( minRadius * 0.9, minRadius * 0.9, 1.0 );
-		this.background.rotation[ 1 ] = Math.PI;
-		this.background.rotation[ 2 ] = Math.PI;
-		this.background.material = this._ml.uColoredTexturedTriangles();
-		this.background.material.uniforms.solidColor = {
+		this.planeBufferGeometry = new THREE.PlaneBufferGeometry( 1, 1, 1, 1 );
 
-			type: 'vec4',
-			data: vec4.fromValues ( 1.0, 1.0, 1.0, 1.0 ),
+		this.backgroundTexture = new THREE.TextureLoader().load("./resources/textures/background.png", function ( texture ) {
 
-		}
-		this.background.material.imageUrl = "./resources/textures/background.png";
+			this.backgroundMaterial = new THREE.MeshBasicMaterial ( {
 
-		this._mainScene.add ( this.background );
+				map: texture,
+				side: THREE.DoubleSide,
+				transparent: true,
+
+			} );
+
+			this.background = new THREE.Mesh ( this.planeBufferGeometry, this.backgroundMaterial );
+			this.background.scale.x = window.innerHeight;
+			this.background.scale.y = window.innerHeight;
+			this.background.rotation.y = Math.PI;
+			this._mainScene.add ( this.background );
+
+		}.bind ( this ) );
+
+		
 
 		// Set time line event
 
@@ -374,13 +358,16 @@ export class VisualizationManager {
 
 		let d = new Date ( this._time );
 
-		// Create the main mesh containing all the particles.
+		// Create the main array containing all the particles.
+
+		this._particles = [];
 
 		for ( let i = this._data.length - 1; i >= 0; i -- ) {
+
 		// for ( let i = 0; i >= 0; i -- ) {
 
 			let maxRadius = window.innerWidth / 2 < window.innerHeight / 2 ? window.innerWidth / 2 : window.innerHeight / 2;
-			let center = vec3.fromValues ( window.innerWidth / 2, window.innerHeight / 2, 0 );
+			let center = vec3.fromValues ( 0, 0, 0 );
 
 			let emotionsNum = 8;
 			let emotionAverage = 0;
@@ -448,8 +435,8 @@ export class VisualizationManager {
 			angle += Math.PI;
 			let distanceFromCenter = Math.random() * maxRadius;
 
-			let position = vec3.fromValues ( this._renderer.realWidth * 0.5, this._renderer.realHeight * 0.5, 0 );
-			let direction = vec3.fromValues ( Math.cos ( angle ), Math.sin ( angle ), 0 );
+			let position = vec3.fromValues ( 0, 0, 0 );
+			let direction = vec3.fromValues ( Math.cos ( angle + Math.PI ), Math.sin ( angle + Math.PI ), 0 );
 			// vec3.subtract ( direction, center, direction );
 			// vec3.normalize ( direction, direction );
 
@@ -525,30 +512,67 @@ export class VisualizationManager {
 		// -----------------------------
 		//
 
-		let particlesGeometry = new P3D.Geometry ( { context: this._gl } );
-		particlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'position', data: new Float32Array ( [] ) } ) );
-		particlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'color', data: new Float32Array ( [] ) } ) );
-		particlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'normal', data: new Float32Array ( [] ) } ) );
+		this._particlesGeometry = new THREE.BufferGeometry();
+		this._particlesGeometry.addAttribute ( 'position', new THREE.BufferAttribute ( new Float32Array ( [] ), 3 ) );
+		this._particlesGeometry.addAttribute ( 'rgbaColor', new THREE.BufferAttribute ( new Float32Array ( [] ), 4 ) );
+		this._particlesGeometry.addAttribute ( 'normal', new THREE.BufferAttribute ( new Float32Array ( [] ), 3 ) );
 
-		let m = this._ml.vertexColorPointSprites();
-		// m = this._ml.points();
+		this._highlightedParticlesGeometry = new THREE.BufferGeometry();
+		this._highlightedParticlesGeometry.addAttribute ( 'position', new THREE.BufferAttribute ( new Float32Array ( [] ), 3 ) );
+		this._highlightedParticlesGeometry.addAttribute ( 'rgbaColor', new THREE.BufferAttribute ( new Float32Array ( [] ), 4 ) );
+		this._highlightedParticlesGeometry.addAttribute ( 'normal', new THREE.BufferAttribute ( new Float32Array ( [] ), 3 ) );
 
-		let particlesMesh = new P3D.Mesh ( { context: this._gl, name: 'particles', geometry: particlesGeometry, material: m } );
-		particlesMesh.material.imageUrl = './resources/textures/sprite.png';
-		particlesMesh.material.depthTest = false;
+		this._particlesTexture = new THREE.TextureLoader().load ( "./resources/textures/sprite.png", function ( texture ) {
 
-		this._mainScene.add ( particlesMesh );
+			this._particlesMaterial = new THREE.ShaderMaterial ( {
 
-		let highlightedParticlesGeometry = new P3D.Geometry ( { context: this._gl } );
-		highlightedParticlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'position', data: new Float32Array ( [] ) } ) );
-		highlightedParticlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'color', data: new Float32Array ( [] ) } ) );
-		highlightedParticlesGeometry.addBufferAttribute ( new P3D.BufferAttribute ( { context: this._gl, name: 'normal', data: new Float32Array ( [] ) } ) );
+				vertexShader: `
 
-		let highlightedParticlesMesh = new P3D.Mesh ( { context: this._gl, name: 'highlightedParticles', geometry: highlightedParticlesGeometry, material: this._ml.vertexColorPointSprites() } );
-		highlightedParticlesMesh.material.imageUrl = './resources/textures/sprite.png';
-		highlightedParticlesMesh.material.depthTest = false;
+					attribute vec4 rgbaColor;
+					varying vec4 f_Color;
 
-		this._mainScene.add ( highlightedParticlesMesh );
+					void main () {
+
+						f_Color = rgbaColor;
+						gl_PointSize = normal.x;
+						gl_Position = projectionMatrix * modelViewMatrix * vec4 ( position, 1.0 );
+
+					}
+
+				`,
+
+				fragmentShader: `
+
+					varying vec4 f_Color;
+					uniform sampler2D texture;
+
+					void main () {
+
+						gl_FragColor = f_Color * texture2D( texture, gl_PointCoord.xy );
+
+					}
+
+				`,
+
+				uniforms: {
+
+					texture: { value: texture },
+
+				},
+
+				transparent: true,
+
+			} );
+
+			this._particlesPoints = new THREE.Points ( this._particlesGeometry, this._particlesMaterial );
+			this._particlesPoints.renderOrder = 10;
+			this._mainScene.add ( this._particlesPoints );
+
+			this._highlightedParticlesPoints = new THREE.Points ( this._highlightedParticlesGeometry, this._particlesMaterial );
+			this._highlightedParticlesPoints.renderOrder = 20;
+			this._mainScene.add ( this._highlightedParticlesPoints );
+
+		}.bind ( this ) );
 
 	}
 
@@ -559,16 +583,6 @@ export class VisualizationManager {
 		// Update particles
 
 		this._currentParticles = [];
-		let particlesMesh = this._mainScene.getChildByName ( 'particles' );
-		let particlesGeometry = particlesMesh.geometry;
-
-		let highlightedParticlesGeometry = null;
-
-		if ( this._mainScene.getChildByName ( 'highlightedParticles' ) ) {
-
-			highlightedParticlesGeometry = this._mainScene.getChildByName ( 'highlightedParticles' ).geometry;
-
-		}
 
 		let newPositions = [];
 
@@ -584,7 +598,8 @@ export class VisualizationManager {
 
 		let hoverParticle = false;
 
-		let center = vec3.fromValues ( this._renderer.realWidth * 0.5, this._renderer.realHeight * 0.5, 0 );
+		// let center = vec3.fromValues ( this._renderer.getSize().width * this._renderer.getPixelRatio() * 0.5, this._renderer.getSize().height * this._renderer.getPixelRatio() * 0.5, 0 );
+		let center = vec3.fromValues ( 0, 0, 0 );
 		let mouseTime = 0;
 		let distanceToCenter = vec3.create();
 		vec3.subtract ( distanceToCenter, this._mouse, center );
@@ -592,9 +607,11 @@ export class VisualizationManager {
 		mouseTime = distanceToCenter / ( this._renderer.realHeight * 0.5 );
 		mouseTime = this._time + mouseTime * this._timeRange;
 
-		let minRadius =  this._renderer.realHeight < this._renderer.realWidth ? this._renderer.realHeight : this._renderer.realWidth;
+		let minRadius =  this._renderer.getSize().height < this._renderer.getSize().width ? this._renderer.getSize().height * this._renderer.getPixelRatio() : this._renderer.getSize().width * this.render.getPixelRatio();
 
 		for ( let i = 0; i < this._particles.length; i ++ ) {
+
+			// console.log(this._particles[i].position);
 
 			let di = this._particles[ i ].dataIndex;
 
@@ -606,12 +623,16 @@ export class VisualizationManager {
 
 			let d = 0;
 
+			// Check wich ones are in the actual time range.
+
 			if ( t >= pMin && t <= pMax ) {
 
 				let currentParticle = this._particles[ i ];
 				this._currentParticles.push ( currentParticle );
 				let currentPosition = vec3.clone ( currentParticle.position );
 	
+				// Mouse force.
+
 				let direction = vec3.create();
 				vec3.subtract ( direction, currentPosition, this._mouse );
 				let distance = vec3.length ( direction );
@@ -620,16 +641,12 @@ export class VisualizationManager {
 				let mouseForce = vec3.clone ( direction );
 				vec3.multiply ( mouseForce, mouseForce, vec3.fromValues ( 20000, 20000, 0 ) );
 	
-				let centerForce = vec3.create();
-				vec3.subtract ( centerForce, center, currentPosition );
-				vec3.multiply ( centerForce, centerForce, vec3.fromValues ( 0.1, 0.1, 0.1 ) );
-	
 				// The force decrease according to the distance between the mouse and the particle.
 	
 				vec3.divide ( mouseForce, mouseForce, vec3.fromValues ( distance, distance, distance ) );
 
 				d = (t - pMin) / (pMax - pMin);
-				d *= minRadius * 0.41;
+				d *= 1000 * 0.41;
 
 				let p = vec3.create ();
 				vec3.multiply ( p, currentParticle.direction, vec3.fromValues ( d, d, 1 ) );
@@ -689,7 +706,6 @@ export class VisualizationManager {
 				vec3.subtract ( staticForce, p, currentPosition );
 				vec3.multiply ( staticForce, staticForce, vec3.fromValues ( 1, 1, 0 ) );
 				this._particles[ i ].applyForce ( staticForce );
-
 				this._particles[ i ].update( _delta );
 
 				drawnParticles.push ( this._particles[ i ].position[ 0 ] );
@@ -712,7 +728,7 @@ export class VisualizationManager {
 					highlightedDrawnColors.push ( this._particles[ i ].color.b * colorPercent + 0.9 * ( 1 - colorPercent ) );
 					highlightedDrawnColors.push ( colorPercent );
 
-					highlightedDrawnNormals.push ( ( this._particles[ i ].size[ 0 ] / window.innerWidth ) * this._renderer.realWidth * ( colorPercent * 0.5 + 0.5 ) );
+					highlightedDrawnNormals.push ( this._particles[ i ].size[ 0 ] * this._renderer.getPixelRatio() * ( colorPercent * 0.5 + 0.5 ) );
 					highlightedDrawnNormals.push ( this._particles[ i ].size[ 1 ] );
 					highlightedDrawnNormals.push ( this._particles[ i ].size[ 2 ] );
 
@@ -736,7 +752,8 @@ export class VisualizationManager {
 
 				}
 	
-				drawnNormals.push ( ( this._particles[ i ].size[ 0 ] / window.innerWidth ) * this._renderer.realWidth * ( colorPercent * 0.5 + 0.5 ) );
+				// drawnNormals.push ( ( this._particles[ i ].size[ 0 ] / window.innerWidth ) * this._renderer.realWidth * ( colorPercent * 0.5 + 0.5 ) );
+				drawnNormals.push ( this._particles[ i ].size[ 0 ] * this._renderer.getPixelRatio() * ( colorPercent * 0.5 + 0.5 ) );
 				drawnNormals.push ( this._particles[ i ].size[ 1 ] );
 				drawnNormals.push ( this._particles[ i ].size[ 2 ] );
 
@@ -746,7 +763,15 @@ export class VisualizationManager {
 
 		}
 
-		
+		// Update the main geometry & highlignt geometry.
+
+		buffer.attr ( this._particlesGeometry, 'position', new Float32Array ( drawnParticles ), 3 );
+		buffer.attr ( this._particlesGeometry, 'rgbaColor', new Float32Array ( drawnColors ), 4 );
+		buffer.attr ( this._particlesGeometry, 'normal', new Float32Array ( drawnNormals ), 3 );
+
+		buffer.attr ( this._highlightedParticlesGeometry, 'position', new Float32Array ( highlightedDrawnParticles ), 3 );
+		buffer.attr ( this._highlightedParticlesGeometry, 'rgbaColor', new Float32Array ( highlightedDrawnColors ), 4 );
+		buffer.attr ( this._highlightedParticlesGeometry, 'normal', new Float32Array ( highlightedDrawnNormals ), 3 );
 
 		if ( !hoverParticle ) {
 
@@ -775,27 +800,12 @@ export class VisualizationManager {
 
 		}
 
-		// Update the buffer that holds vertices positions.
-
-		particlesGeometry.bufferAttributes.position.setData ( new Float32Array ( drawnParticles ), this._gl.DYNAMIC_DRAW ); 
-		particlesGeometry.bufferAttributes.normal.setData ( new Float32Array ( drawnNormals ), this._gl.DYNAMIC_DRAW ); 
-		particlesGeometry.bufferAttributes.color.setData ( new Float32Array ( drawnColors ), this._gl.DYNAMIC_DRAW ); 
-
-		if ( this._mainScene.getChildByName ( 'highlightedParticles' ) ) {
-
-			highlightedParticlesGeometry.bufferAttributes.position.setData ( new Float32Array ( highlightedDrawnParticles ), this._gl.DYNAMIC_DRAW ); 
-			highlightedParticlesGeometry.bufferAttributes.normal.setData ( new Float32Array ( highlightedDrawnNormals ), this._gl.DYNAMIC_DRAW ); 
-			highlightedParticlesGeometry.bufferAttributes.color.setData ( new Float32Array ( highlightedDrawnColors ), this._gl.DYNAMIC_DRAW ); 
-		}
-
 	}
 
 	render () {
 
 		if ( !this._enableRendering ) return;
-
-		this._gl.clear ( this._gl.COLOR_BUFFER_BIT | this._gl.DEPTH_BUFFER_BIT );
-		this._mainScene.render ( this._mainCamera );
+		this._renderer.render ( this._mainScene, this._mainCamera );
 
 	}
 
