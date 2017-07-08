@@ -2,7 +2,6 @@ Food & Mood
 ----------
 
 The aim of this project is to enable users to browse hundreds of tweets related to both food and mood. By placing these tweets on a wheel, the user can visualize how moods are correlated with a certain food. By extracting emotions from emojis, we were able to recreate Plutchik's wheel of emotions with hundreds of tweets sorted by their time of publication.
-
 ----------
 
 #### Build informations: ####
